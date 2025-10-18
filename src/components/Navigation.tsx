@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Package, Users, FileText, LogOut, Plus } from "lucide-react";
+import { LayoutDashboard, Package, Users, FileText, LogOut, Plus, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -29,8 +29,9 @@ const Navigation = () => {
   const navItems = [
     { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { path: "/parts", icon: Package, label: "Parts" },
+    { path: "/bills", icon: FileText, label: "Bills" },
     { path: "/customers", icon: Users, label: "Customers" },
-    { path: "/udhaari", icon: FileText, label: "Udhaari" },
+    { path: "/udhaari", icon: CreditCard, label: "Udhaari" },
   ];
 
   return (

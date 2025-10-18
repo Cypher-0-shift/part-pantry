@@ -18,6 +18,7 @@ import {
 
 interface Customer {
   id: string;
+  customer_id: string | null;
   name: string;
   phone: string | null;
   email: string | null;
@@ -35,11 +36,39 @@ const Customers = () => {
     phone: "",
     email: "",
     address: "",
+    customer_id: "",
   });
 
   useEffect(() => {
     fetchCustomers();
   }, []);
+
+  useEffect(() => {
+    if (open) {
+      generateCustomerId();
+    }
+  }, [open]);
+
+  const generateCustomerId = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("customers")
+      .select("customer_id")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    let newId = "CUST-001";
+    if (data && data.length > 0 && data[0].customer_id) {
+      const lastId = data[0].customer_id;
+      const num = parseInt(lastId.split("-")[1]) + 1;
+      newId = `CUST-${num.toString().padStart(3, "0")}`;
+    }
+
+    setFormData(prev => ({ ...prev, customer_id: newId }));
+  };
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -68,6 +97,7 @@ const Customers = () => {
 
     const { error } = await supabase.from("customers").insert({
       user_id: user.id,
+      customer_id: formData.customer_id,
       name: formData.name,
       phone: formData.phone || null,
       email: formData.email || null,
@@ -85,7 +115,7 @@ const Customers = () => {
         title: "Success",
         description: "Customer added successfully",
       });
-      setFormData({ name: "", phone: "", email: "", address: "" });
+      setFormData({ name: "", phone: "", email: "", address: "", customer_id: "" });
       setOpen(false);
       fetchCustomers();
     }
@@ -131,6 +161,15 @@ const Customers = () => {
                 <DialogDescription>Enter customer details below</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="customer_id">Customer ID</Label>
+                  <Input
+                    id="customer_id"
+                    value={formData.customer_id}
+                    readOnly
+                    className="bg-muted"
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="name">Name *</Label>
                   <Input
@@ -193,10 +232,17 @@ const Customers = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {customers.map((customer) => (
-              <Card key={customer.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
+              <Card key={customer.id} className="hover:shadow-lg transition-all hover:scale-105 duration-300">
+                <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5">
                   <CardTitle className="flex items-center justify-between">
-                    <span className="truncate">{customer.name}</span>
+                    <div>
+                      <span className="truncate block">{customer.name}</span>
+                      {customer.customer_id && (
+                        <span className="text-xs text-muted-foreground font-normal">
+                          ID: {customer.customer_id}
+                        </span>
+                      )}
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"

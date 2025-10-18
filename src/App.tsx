@@ -9,6 +9,7 @@ import AddStock from "./pages/AddStock";
 import Parts from "./pages/Parts";
 import Customers from "./pages/Customers";
 import Udhaari from "./pages/Udhaari";
+import Bills from "./pages/Bills";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -44,6 +45,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Parts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bills"
+            element={
+              <ProtectedRoute>
+                <Bills />
               </ProtectedRoute>
             }
           />
