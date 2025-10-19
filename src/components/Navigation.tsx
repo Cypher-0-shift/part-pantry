@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Package, Users, FileText, LogOut, Plus, CreditCard } from "lucide-react";
+import { LayoutDashboard, Package, Users, FileText, LogOut, Plus, CreditCard, Building2, Settings as SettingsIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +32,8 @@ const Navigation = () => {
     { path: "/bills", icon: FileText, label: "Bills" },
     { path: "/customers", icon: Users, label: "Customers" },
     { path: "/udhaari", icon: CreditCard, label: "Udhaari" },
+    { path: "/profile", icon: Building2, label: "Profile" },
+    { path: "/settings", icon: SettingsIcon, label: "Settings" },
   ];
 
   return (
@@ -43,7 +45,7 @@ const Navigation = () => {
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                 <Package className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-xl">Garage Manager</span>
+              <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Vijaya Auto Spares</span>
             </Link>
             <nav className="hidden md:flex gap-1">
               {navItems.map((item) => {

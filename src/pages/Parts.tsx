@@ -21,11 +21,15 @@ import {
 
 interface Part {
   id: string;
-  part_code: string;
+  hsn_code: string;
   part_name: string;
   brand: string;
   category: string;
+  buying_price: number;
+  selling_price: number;
   price: number;
+  sgst_percentage: number;
+  cgst_percentage: number;
   quantity: number;
   low_stock_threshold: number;
   image_url: string | null;
@@ -47,7 +51,7 @@ const Parts = () => {
     const filtered = parts.filter(
       (part) =>
         part.part_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        part.part_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        part.hsn_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         part.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
         part.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -176,16 +180,20 @@ const Parts = () => {
                   
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Code:</span>
-                      <span className="font-medium">{part.part_code}</span>
+                      <span className="text-muted-foreground">HSN:</span>
+                      <span className="font-medium">{part.hsn_code}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Category:</span>
                       <span className="font-medium">{part.category}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Price:</span>
-                      <span className="font-medium">Rs {part.price.toFixed(2)}</span>
+                      <span className="text-muted-foreground">Buy/Sell:</span>
+                      <span className="font-medium">₹{part.buying_price.toFixed(2)} / ₹{part.selling_price.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">GST:</span>
+                      <span className="font-medium">{part.sgst_percentage + part.cgst_percentage}%</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Quantity:</span>

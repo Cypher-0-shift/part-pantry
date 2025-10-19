@@ -19,11 +19,14 @@ const AddStock = () => {
   const [imagePreview, setImagePreview] = useState<string>("");
 
   const [formData, setFormData] = useState({
-    partCode: "",
+    hsnCode: "",
     partName: "",
     brand: "",
     category: "",
-    price: "",
+    buyingPrice: "",
+    sellingPrice: "",
+    sgst: "",
+    cgst: "",
     quantity: "",
     lowStockThreshold: "5",
   });
@@ -81,25 +84,25 @@ const AddStock = () => {
     }
   };
 
-  const generatePartCode = async () => {
+  const generateHSNCode = async () => {
     const { data, error } = await supabase
       .from("stock")
-      .select("part_code")
+      .select("hsn_code")
       .order("created_at", { ascending: false })
       .limit(1);
 
     if (error || !data || data.length === 0) {
-      return "BP-001";
+      return "HSN-001";
     }
 
-    const lastCode = data[0].part_code;
-    const match = lastCode.match(/BP-(\d+)/);
+    const lastCode = data[0].hsn_code;
+    const match = lastCode.match(/HSN-(\d+)/);
     if (match) {
       const nextNum = parseInt(match[1]) + 1;
-      return `BP-${String(nextNum).padStart(3, "0")}`;
+      return `HSN-${String(nextNum).padStart(3, "0")}`;
     }
 
-    return "BP-001";
+    return "HSN-001";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,18 +118,22 @@ const AddStock = () => {
         imageUrl = await uploadImage();
       }
 
-      let partCode = formData.partCode;
-      if (!partCode) {
-        partCode = await generatePartCode();
+      let hsnCode = formData.hsnCode;
+      if (!hsnCode) {
+        hsnCode = await generateHSNCode();
       }
 
       const { error } = await supabase.from("stock").insert({
         user_id: user.id,
-        part_code: partCode,
+        hsn_code: hsnCode,
         part_name: formData.partName,
         brand: formData.brand,
         category: formData.category,
-        price: parseFloat(formData.price),
+        buying_price: parseFloat(formData.buyingPrice),
+        selling_price: parseFloat(formData.sellingPrice),
+        price: parseFloat(formData.sellingPrice), // Keep for backward compatibility
+        sgst_percentage: parseFloat(formData.sgst) || 0,
+        cgst_percentage: parseFloat(formData.cgst) || 0,
         quantity: parseInt(formData.quantity),
         low_stock_threshold: parseInt(formData.lowStockThreshold),
         image_url: imageUrl,
@@ -173,14 +180,14 @@ const AddStock = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="partCode">
-                    Part Code <span className="text-muted-foreground text-xs">(optional - auto-generated)</span>
+                  <Label htmlFor="hsnCode">
+                    HSN Code <span className="text-muted-foreground text-xs">(optional - auto-generated)</span>
                   </Label>
                   <Input
-                    id="partCode"
-                    name="partCode"
-                    placeholder="BP-001"
-                    value={formData.partCode}
+                    id="hsnCode"
+                    name="hsnCode"
+                    placeholder="HSN-001"
+                    value={formData.hsnCode}
                     onChange={handleChange}
                   />
                 </div>
@@ -222,14 +229,56 @@ const AddStock = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="price">Price (Rs) *</Label>
+                  <Label htmlFor="buyingPrice">Buying Price (₹) *</Label>
                   <Input
-                    id="price"
-                    name="price"
+                    id="buyingPrice"
+                    name="buyingPrice"
+                    type="number"
+                    step="0.01"
+                    placeholder="1200.00"
+                    value={formData.buyingPrice}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="sellingPrice">Selling Price (₹) *</Label>
+                  <Input
+                    id="sellingPrice"
+                    name="sellingPrice"
                     type="number"
                     step="0.01"
                     placeholder="1500.00"
-                    value={formData.price}
+                    value={formData.sellingPrice}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="sgst">SGST % *</Label>
+                  <Input
+                    id="sgst"
+                    name="sgst"
+                    type="number"
+                    step="0.01"
+                    placeholder="9"
+                    value={formData.sgst}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cgst">CGST % *</Label>
+                  <Input
+                    id="cgst"
+                    name="cgst"
+                    type="number"
+                    step="0.01"
+                    placeholder="9"
+                    value={formData.cgst}
                     onChange={handleChange}
                     required
                   />

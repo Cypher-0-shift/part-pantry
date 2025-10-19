@@ -10,6 +10,8 @@ import Parts from "./pages/Parts";
 import Customers from "./pages/Customers";
 import Udhaari from "./pages/Udhaari";
 import Bills from "./pages/Bills";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -69,6 +71,22 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Udhaari />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             }
           />

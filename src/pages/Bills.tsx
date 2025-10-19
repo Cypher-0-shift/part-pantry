@@ -31,10 +31,14 @@ interface Customer {
 
 interface StockItem {
   id: string;
-  part_code: string;
+  hsn_code: string;
   part_name: string;
   brand: string;
+  buying_price: number;
+  selling_price: number;
   price: number;
+  sgst_percentage: number;
+  cgst_percentage: number;
   quantity: number;
 }
 
