@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_settings: {
+        Row: {
+          address: string | null
+          business_name: string
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          gstin: string | null
+          id: string
+          logo_url: string | null
+          owner_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          business_name?: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          gstin?: string | null
+          id?: string
+          logo_url?: string | null
+          owner_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          business_name?: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          gstin?: string | null
+          id?: string
+          logo_url?: string | null
+          owner_name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null
@@ -49,34 +91,49 @@ export type Database = {
       }
       order_items: {
         Row: {
+          buying_price: number | null
+          cgst_amount: number | null
           created_at: string
           id: string
           order_id: string
           part_name: string
           price: number
           quantity: number
+          selling_price: number | null
+          sgst_amount: number | null
           stock_id: string
           subtotal: number
+          total_gst: number | null
         }
         Insert: {
+          buying_price?: number | null
+          cgst_amount?: number | null
           created_at?: string
           id?: string
           order_id: string
           part_name: string
           price: number
           quantity: number
+          selling_price?: number | null
+          sgst_amount?: number | null
           stock_id: string
           subtotal: number
+          total_gst?: number | null
         }
         Update: {
+          buying_price?: number | null
+          cgst_amount?: number | null
           created_at?: string
           id?: string
           order_id?: string
           part_name?: string
           price?: number
           quantity?: number
+          selling_price?: number | null
+          sgst_amount?: number | null
           stock_id?: string
           subtotal?: number
+          total_gst?: number | null
         }
         Relationships: [
           {
@@ -101,7 +158,10 @@ export type Database = {
           customer_id: string
           id: string
           order_number: string
+          profit_amount: number | null
           total_amount: number
+          total_buying_price: number | null
+          total_selling_price: number | null
           user_id: string
         }
         Insert: {
@@ -109,7 +169,10 @@ export type Database = {
           customer_id: string
           id?: string
           order_number: string
+          profit_amount?: number | null
           total_amount?: number
+          total_buying_price?: number | null
+          total_selling_price?: number | null
           user_id: string
         }
         Update: {
@@ -117,7 +180,10 @@ export type Database = {
           customer_id?: string
           id?: string
           order_number?: string
+          profit_amount?: number | null
           total_amount?: number
+          total_buying_price?: number | null
+          total_selling_price?: number | null
           user_id?: string
         }
         Relationships: [
@@ -154,43 +220,55 @@ export type Database = {
       stock: {
         Row: {
           brand: string
+          buying_price: number
           category: string
+          cgst_percentage: number
           created_at: string
+          hsn_code: string
           id: string
           image_url: string | null
           low_stock_threshold: number
-          part_code: string
           part_name: string
           price: number
           quantity: number
+          selling_price: number
+          sgst_percentage: number
           updated_at: string
           user_id: string
         }
         Insert: {
           brand: string
+          buying_price?: number
           category: string
+          cgst_percentage?: number
           created_at?: string
+          hsn_code: string
           id?: string
           image_url?: string | null
           low_stock_threshold?: number
-          part_code: string
           part_name: string
           price: number
           quantity?: number
+          selling_price?: number
+          sgst_percentage?: number
           updated_at?: string
           user_id: string
         }
         Update: {
           brand?: string
+          buying_price?: number
           category?: string
+          cgst_percentage?: number
           created_at?: string
+          hsn_code?: string
           id?: string
           image_url?: string | null
           low_stock_threshold?: number
-          part_code?: string
           part_name?: string
           price?: number
           quantity?: number
+          selling_price?: number
+          sgst_percentage?: number
           updated_at?: string
           user_id?: string
         }
