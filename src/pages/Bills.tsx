@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Plus, Trash2, ShoppingCart, DollarSign } from "lucide-react";
+import { FileText, Plus, Trash2, ShoppingCart, DollarSign, Download } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { generateBillPDF } from "@/lib/pdf-generator";
 
 interface Customer {
   id: string;
@@ -47,6 +49,13 @@ interface OrderItem {
   part_name: string;
   quantity: number;
   price: number;
+  buying_price: number;
+  selling_price: number;
+  sgst_percentage: number;
+  cgst_percentage: number;
+  sgst_amount: number;
+  cgst_amount: number;
+  total_gst: number;
   subtotal: number;
 }
 
@@ -73,6 +82,7 @@ const Bills = () => {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [selectedStock, setSelectedStock] = useState("");
   const [itemQuantity, setItemQuantity] = useState(1);
+  const [includeGST, setIncludeGST] = useState(true);
 
   useEffect(() => {
     fetchData();
@@ -150,15 +160,30 @@ const Bills = () => {
       return;
     }
 
+    const basePrice = Number(stockItem.selling_price);
+    const sgstAmount = (basePrice * Number(stockItem.sgst_percentage)) / 100;
+    const cgstAmount = (basePrice * Number(stockItem.cgst_percentage)) / 100;
+    const totalGst = sgstAmount + cgstAmount;
+    const priceWithGst = basePrice + totalGst;
+
     const existingItem = orderItems.find((item) => item.stock_id === selectedStock);
     if (existingItem) {
+      const newQty = existingItem.quantity + itemQuantity;
+      const newSgst = sgstAmount * newQty;
+      const newCgst = cgstAmount * newQty;
+      const newTotalGst = newSgst + newCgst;
+      const newSubtotal = includeGST ? priceWithGst * newQty : basePrice * newQty;
+
       setOrderItems(
         orderItems.map((item) =>
           item.stock_id === selectedStock
             ? {
                 ...item,
-                quantity: item.quantity + itemQuantity,
-                subtotal: (item.quantity + itemQuantity) * item.price,
+                quantity: newQty,
+                sgst_amount: newSgst,
+                cgst_amount: newCgst,
+                total_gst: newTotalGst,
+                subtotal: newSubtotal,
               }
             : item
         )
@@ -170,8 +195,15 @@ const Bills = () => {
           stock_id: stockItem.id,
           part_name: `${stockItem.part_name} (${stockItem.brand})`,
           quantity: itemQuantity,
-          price: Number(stockItem.price),
-          subtotal: itemQuantity * Number(stockItem.price),
+          price: includeGST ? priceWithGst : basePrice,
+          buying_price: Number(stockItem.buying_price),
+          selling_price: basePrice,
+          sgst_percentage: Number(stockItem.sgst_percentage),
+          cgst_percentage: Number(stockItem.cgst_percentage),
+          sgst_amount: sgstAmount * itemQuantity,
+          cgst_amount: cgstAmount * itemQuantity,
+          total_gst: totalGst * itemQuantity,
+          subtotal: includeGST ? priceWithGst * itemQuantity : basePrice * itemQuantity,
         },
       ]);
     }
@@ -186,6 +218,22 @@ const Bills = () => {
 
   const calculateTotal = () => {
     return orderItems.reduce((sum, item) => sum + item.subtotal, 0);
+  };
+
+  const calculateTotalGST = () => {
+    return orderItems.reduce((sum, item) => sum + item.total_gst, 0);
+  };
+
+  const calculateTotalBuyingPrice = () => {
+    return orderItems.reduce((sum, item) => sum + item.buying_price * item.quantity, 0);
+  };
+
+  const calculateTotalSellingPrice = () => {
+    return orderItems.reduce((sum, item) => sum + item.selling_price * item.quantity, 0);
+  };
+
+  const calculateProfit = () => {
+    return calculateTotalSellingPrice() - calculateTotalBuyingPrice();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -214,6 +262,9 @@ const Bills = () => {
 
     const orderNumber = await generateOrderNumber();
     const total = calculateTotal();
+    const totalBuying = calculateTotalBuyingPrice();
+    const totalSelling = calculateTotalSellingPrice();
+    const profit = calculateProfit();
 
     // Insert order
     const { data: orderData, error: orderError } = await supabase
@@ -222,6 +273,9 @@ const Bills = () => {
         order_number: orderNumber,
         customer_id: selectedCustomer,
         total_amount: total,
+        total_buying_price: totalBuying,
+        total_selling_price: totalSelling,
+        profit_amount: profit,
         user_id: user.id,
       })
       .select()
@@ -244,6 +298,11 @@ const Bills = () => {
         part_name: item.part_name,
         quantity: item.quantity,
         price: item.price,
+        buying_price: item.buying_price,
+        selling_price: item.selling_price,
+        sgst_amount: item.sgst_amount,
+        cgst_amount: item.cgst_amount,
+        total_gst: item.total_gst,
         subtotal: item.subtotal,
       }))
     );
@@ -319,9 +378,19 @@ const Bills = () => {
                   </Select>
                 </div>
 
-                <div className="border-t pt-4">
-                  <h3 className="font-semibold mb-3">Add Items</h3>
-                  <div className="grid grid-cols-3 gap-3">
+                 <div className="border-t pt-4">
+                   <div className="flex items-center justify-between mb-3">
+                     <h3 className="font-semibold">Add Items</h3>
+                     <div className="flex items-center gap-2">
+                       <Label htmlFor="gst-toggle" className="text-sm">Include GST</Label>
+                       <Switch
+                         id="gst-toggle"
+                         checked={includeGST}
+                         onCheckedChange={setIncludeGST}
+                       />
+                     </div>
+                   </div>
+                   <div className="grid grid-cols-3 gap-3">
                     <div className="col-span-2">
                       <Label>Select Part</Label>
                       <Select value={selectedStock} onValueChange={setSelectedStock}>
@@ -362,12 +431,17 @@ const Bills = () => {
                         key={item.stock_id}
                         className="flex items-center justify-between p-2 bg-card rounded"
                       >
-                        <div className="flex-1">
-                          <p className="font-medium">{item.part_name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {item.quantity} × ₹{item.price} = ₹{item.subtotal}
-                          </p>
-                        </div>
+                         <div className="flex-1">
+                           <p className="font-medium">{item.part_name}</p>
+                           <p className="text-sm text-muted-foreground">
+                             {item.quantity} × ₹{item.price.toFixed(2)} = ₹{item.subtotal.toFixed(2)}
+                           </p>
+                           {includeGST && (
+                             <p className="text-xs text-muted-foreground">
+                               GST: ₹{item.total_gst.toFixed(2)} (SGST: ₹{item.sgst_amount.toFixed(2)}, CGST: ₹{item.cgst_amount.toFixed(2)})
+                             </p>
+                           )}
+                         </div>
                         <Button
                           type="button"
                           variant="ghost"
@@ -378,11 +452,16 @@ const Bills = () => {
                         </Button>
                       </div>
                     ))}
-                    <div className="border-t pt-2 mt-2">
-                      <p className="text-lg font-bold text-right">
-                        Total: ₹{calculateTotal().toFixed(2)}
-                      </p>
-                    </div>
+                     <div className="border-t pt-2 mt-2 space-y-1">
+                       {includeGST && (
+                         <p className="text-sm text-muted-foreground text-right">
+                           Total GST: ₹{calculateTotalGST().toFixed(2)}
+                         </p>
+                       )}
+                       <p className="text-lg font-bold text-right">
+                         Total: ₹{calculateTotal().toFixed(2)}
+                       </p>
+                     </div>
                   </div>
                 )}
 
@@ -414,20 +493,27 @@ const Bills = () => {
                 key={order.id}
                 className="hover:shadow-xl transition-all hover:scale-105 duration-300 border-2"
               >
-                <CardHeader className="bg-gradient-to-r from-primary/10 to-secondary/10">
-                  <CardTitle className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <ShoppingCart className="w-5 h-5" />
-                        <span className="font-bold">{order.order_number}</span>
-                      </div>
-                      <p className="text-sm font-normal text-muted-foreground">
-                        {order.customers?.customer_id}
-                      </p>
-                      <p className="text-base font-semibold">{order.customers?.name}</p>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
+                 <CardHeader className="bg-gradient-to-r from-primary/10 to-secondary/10">
+                   <CardTitle className="flex items-start justify-between">
+                     <div>
+                       <div className="flex items-center gap-2 mb-1">
+                         <ShoppingCart className="w-5 h-5" />
+                         <span className="font-bold">{order.order_number}</span>
+                       </div>
+                       <p className="text-sm font-normal text-muted-foreground">
+                         {order.customers?.customer_id}
+                       </p>
+                       <p className="text-base font-semibold">{order.customers?.name}</p>
+                     </div>
+                     <Button
+                       size="sm"
+                       variant="outline"
+                       onClick={() => generateBillPDF(order.id)}
+                     >
+                       <Download className="w-4 h-4" />
+                     </Button>
+                   </CardTitle>
+                 </CardHeader>
                 <CardContent className="pt-4">
                   <div className="flex items-center justify-between p-3 bg-gradient-to-r from-accent/20 to-secondary/20 rounded-lg">
                     <div className="flex items-center gap-2">
