@@ -57,7 +57,7 @@ export const generateBillPDF = async (orderId: string) => {
       yPos += 6;
     }
     
-    if (businessSettings?.gstin) {
+    if (businessSettings?.gstin && businessSettings?.show_gst_details) {
       doc.text(`GSTIN: ${businessSettings.gstin}`, pageWidth / 2, yPos, { align: "center" });
       yPos += 6;
     }
@@ -113,7 +113,7 @@ export const generateBillPDF = async (orderId: string) => {
 
     // Items Table
     const tableData = items?.map((item, index) => {
-      const hasGst = item.total_gst && item.total_gst > 0;
+      const hasGst = item.total_gst && item.total_gst > 0 && businessSettings?.show_gst_details;
       return [
         index + 1,
         item.part_name,
@@ -171,11 +171,31 @@ export const generateBillPDF = async (orderId: string) => {
     doc.text("Total Amount:", summaryX, summaryY + 12);
     doc.text(`₹${Number(order.total_amount).toFixed(2)}`, summaryX + 40, summaryY + 12, { align: "right" });
 
+    // Notes and Terms
+    let footerY = summaryY + 20;
+    if (businessSettings?.bill_notes) {
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.text("Notes:", 14, footerY);
+      const notesLines = doc.splitTextToSize(businessSettings.bill_notes, pageWidth - 28);
+      doc.text(notesLines, 14, footerY + 5);
+      footerY += 5 + notesLines.length * 4;
+    }
+
+    if (businessSettings?.bill_terms) {
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.text("Terms & Conditions:", 14, footerY + 5);
+      const termsLines = doc.splitTextToSize(businessSettings.bill_terms, pageWidth - 28);
+      doc.text(termsLines, 14, footerY + 10);
+      footerY += 10 + termsLines.length * 4;
+    }
+
     // Footer
-    const footerY = doc.internal.pageSize.height - 20;
+    const finalFooterY = doc.internal.pageSize.height - 20;
     doc.setFontSize(9);
     doc.setFont("helvetica", "italic");
-    doc.text("Thank you for your business!", pageWidth / 2, footerY, { align: "center" });
+    doc.text("Thank you for your business!", pageWidth / 2, finalFooterY, { align: "center" });
 
     // Save PDF
     doc.save(`Invoice-${order.order_number}.pdf`);

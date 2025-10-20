@@ -16,6 +16,11 @@ interface BusinessSettings {
   contact_phone: string;
   contact_email: string;
   logo_url: string | null;
+  bill_notes: string;
+  bill_terms: string;
+  show_logo: boolean;
+  show_gst_details: boolean;
+  bill_template_url: string | null;
 }
 
 const Profile = () => {
@@ -25,6 +30,8 @@ const Profile = () => {
   const [uploading, setUploading] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>("");
+  const [templateFile, setTemplateFile] = useState<File | null>(null);
+  const [templatePreview, setTemplatePreview] = useState<string>("");
   
   const [formData, setFormData] = useState<BusinessSettings>({
     business_name: "Vijaya Auto Spares",
@@ -34,6 +41,11 @@ const Profile = () => {
     contact_phone: "",
     contact_email: "",
     logo_url: null,
+    bill_notes: "",
+    bill_terms: "",
+    show_logo: true,
+    show_gst_details: true,
+    bill_template_url: null,
   });
 
   useEffect(() => {
@@ -60,9 +72,17 @@ const Profile = () => {
         contact_phone: data.contact_phone || "",
         contact_email: data.contact_email || "",
         logo_url: data.logo_url || null,
+        bill_notes: data.bill_notes || "",
+        bill_terms: data.bill_terms || "",
+        show_logo: data.show_logo ?? true,
+        show_gst_details: data.show_gst_details ?? true,
+        bill_template_url: data.bill_template_url || null,
       });
       if (data.logo_url) {
         setLogoPreview(data.logo_url);
+      }
+      if (data.bill_template_url) {
+        setTemplatePreview(data.bill_template_url);
       }
     }
     setFetching(false);
@@ -82,6 +102,18 @@ const Profile = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleTemplateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setTemplateFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setTemplatePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -121,6 +153,40 @@ const Profile = () => {
     }
   };
 
+  const uploadTemplate = async (): Promise<string | null> => {
+    if (!templateFile) return formData.bill_template_url;
+
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const fileExt = templateFile.name.split(".").pop();
+      const fileName = `${user.id}/template-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("part-images")
+        .upload(fileName, templateFile, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("part-images")
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error: any) {
+      toast({
+        title: "Template upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return formData.bill_template_url;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -130,6 +196,7 @@ const Profile = () => {
       if (!user) throw new Error("User not authenticated");
 
       const logoUrl = await uploadLogo();
+      const templateUrl = await uploadTemplate();
 
       const { error } = await supabase
         .from("business_settings")
@@ -137,6 +204,7 @@ const Profile = () => {
           user_id: user.id,
           ...formData,
           logo_url: logoUrl,
+          bill_template_url: templateUrl,
         });
 
       if (error) throw error;
@@ -292,6 +360,95 @@ const Profile = () => {
                   </>
                 ) : (
                   "Save Changes"
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card className="max-w-2xl mx-auto shadow-lg mt-6">
+          <CardHeader className="bg-gradient-to-r from-primary/10 to-secondary/10">
+            <CardTitle>Bill Template & Customization</CardTitle>
+            <CardDescription>Customize your bill format and default settings</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="template">Upload Bill Template (Reference)</Label>
+                <div className="flex flex-col gap-4">
+                  <Input
+                    id="template"
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={handleTemplateChange}
+                  />
+                  {templatePreview && (
+                    <div className="relative w-full max-w-md">
+                      <img
+                        src={templatePreview}
+                        alt="Template Preview"
+                        className="rounded-lg border w-full object-contain bg-muted"
+                      />
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Upload your company's bill format as reference (optional)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bill_notes">Default Bill Notes</Label>
+                <Input
+                  id="bill_notes"
+                  name="bill_notes"
+                  placeholder="Thank you for your business!"
+                  value={formData.bill_notes}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bill_terms">Terms & Conditions</Label>
+                <Input
+                  id="bill_terms"
+                  name="bill_terms"
+                  placeholder="Payment due within 30 days"
+                  value={formData.bill_terms}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="flex items-center justify-between py-2 border-b">
+                <Label htmlFor="show_logo">Show Logo on Bills</Label>
+                <input
+                  id="show_logo"
+                  type="checkbox"
+                  className="w-4 h-4 rounded border-gray-300"
+                  checked={formData.show_logo}
+                  onChange={(e) => setFormData({ ...formData, show_logo: e.target.checked })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between py-2">
+                <Label htmlFor="show_gst">Show GST Details on Bills</Label>
+                <input
+                  id="show_gst"
+                  type="checkbox"
+                  className="w-4 h-4 rounded border-gray-300"
+                  checked={formData.show_gst_details}
+                  onChange={(e) => setFormData({ ...formData, show_gst_details: e.target.checked })}
+                />
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading || uploading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Template Settings"
                 )}
               </Button>
             </form>

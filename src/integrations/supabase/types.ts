@@ -17,6 +17,9 @@ export type Database = {
       business_settings: {
         Row: {
           address: string | null
+          bill_notes: string | null
+          bill_template_url: string | null
+          bill_terms: string | null
           business_name: string
           contact_email: string | null
           contact_phone: string | null
@@ -25,11 +28,16 @@ export type Database = {
           id: string
           logo_url: string | null
           owner_name: string | null
+          show_gst_details: boolean | null
+          show_logo: boolean | null
           updated_at: string
           user_id: string
         }
         Insert: {
           address?: string | null
+          bill_notes?: string | null
+          bill_template_url?: string | null
+          bill_terms?: string | null
           business_name?: string
           contact_email?: string | null
           contact_phone?: string | null
@@ -38,11 +46,16 @@ export type Database = {
           id?: string
           logo_url?: string | null
           owner_name?: string | null
+          show_gst_details?: boolean | null
+          show_logo?: boolean | null
           updated_at?: string
           user_id: string
         }
         Update: {
           address?: string | null
+          bill_notes?: string | null
+          bill_template_url?: string | null
+          bill_terms?: string | null
           business_name?: string
           contact_email?: string | null
           contact_phone?: string | null
@@ -51,6 +64,8 @@ export type Database = {
           id?: string
           logo_url?: string | null
           owner_name?: string | null
+          show_gst_details?: boolean | null
+          show_logo?: boolean | null
           updated_at?: string
           user_id?: string
         }

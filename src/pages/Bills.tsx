@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Plus, Trash2, ShoppingCart, DollarSign, Download } from "lucide-react";
+import { FileText, Plus, Trash2, ShoppingCart, DollarSign, Download, Share2, Mail, MessageCircle, Edit2, Check, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -83,6 +83,9 @@ const Bills = () => {
   const [selectedStock, setSelectedStock] = useState("");
   const [itemQuantity, setItemQuantity] = useState(1);
   const [includeGST, setIncludeGST] = useState(true);
+  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editPrice, setEditPrice] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -216,6 +219,32 @@ const Bills = () => {
     setOrderItems(orderItems.filter((item) => item.stock_id !== stock_id));
   };
 
+  const updateItemPrice = (stock_id: string, newPrice: number) => {
+    setOrderItems(
+      orderItems.map((item) => {
+        if (item.stock_id === stock_id) {
+          const sgstAmount = (newPrice * item.sgst_percentage) / 100;
+          const cgstAmount = (newPrice * item.cgst_percentage) / 100;
+          const totalGst = sgstAmount + cgstAmount;
+          const priceWithGst = includeGST ? newPrice + totalGst : newPrice;
+          
+          return {
+            ...item,
+            selling_price: newPrice,
+            price: priceWithGst,
+            sgst_amount: sgstAmount * item.quantity,
+            cgst_amount: cgstAmount * item.quantity,
+            total_gst: totalGst * item.quantity,
+            subtotal: priceWithGst * item.quantity,
+          };
+        }
+        return item;
+      })
+    );
+    setEditingItemId(null);
+    setEditPrice("");
+  };
+
   const calculateTotal = () => {
     return orderItems.reduce((sum, item) => sum + item.subtotal, 0);
   };
@@ -335,7 +364,19 @@ const Bills = () => {
     setSelectedCustomer("");
     setOrderItems([]);
     setOpen(false);
+    setInvoiceDate(new Date().toISOString().split('T')[0]);
     fetchData();
+  };
+
+  const shareViaWhatsApp = (order: Order) => {
+    const message = `Invoice: ${order.order_number}%0ACustomer: ${order.customers?.name}%0AAmount: ₹${Number(order.total_amount).toFixed(2)}%0ADate: ${new Date(order.created_at).toLocaleDateString("en-IN")}`;
+    window.open(`https://wa.me/?text=${message}`, "_blank");
+  };
+
+  const shareViaEmail = (order: Order) => {
+    const subject = `Invoice ${order.order_number}`;
+    const body = `Dear ${order.customers?.name},%0A%0APlease find your invoice details below:%0A%0AInvoice Number: ${order.order_number}%0AAmount: ₹${Number(order.total_amount).toFixed(2)}%0ADate: ${new Date(order.created_at).toLocaleDateString("en-IN")}%0A%0AThank you for your business!`;
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
 
   return (
@@ -362,9 +403,10 @@ const Bills = () => {
                 <DialogDescription>Add items and generate a bill</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Select Customer *</Label>
-                  <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Select Customer *</Label>
+                    <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
                     <SelectTrigger>
                       <SelectValue placeholder="Choose a customer" />
                     </SelectTrigger>
@@ -376,6 +418,17 @@ const Bills = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Invoice Date *</Label>
+                  <Input
+                    type="date"
+                    value={invoiceDate}
+                    onChange={(e) => setInvoiceDate(e.target.value)}
+                    required
+                  />
+                </div>
                 </div>
 
                  <div className="border-t pt-4">
@@ -433,23 +486,66 @@ const Bills = () => {
                       >
                          <div className="flex-1">
                            <p className="font-medium">{item.part_name}</p>
-                           <p className="text-sm text-muted-foreground">
-                             {item.quantity} × ₹{item.price.toFixed(2)} = ₹{item.subtotal.toFixed(2)}
-                           </p>
+                           {editingItemId === item.stock_id ? (
+                             <div className="flex items-center gap-2 mt-1">
+                               <Input
+                                 type="number"
+                                 step="0.01"
+                                 value={editPrice}
+                                 onChange={(e) => setEditPrice(e.target.value)}
+                                 className="w-24 h-8"
+                                 placeholder="New rate"
+                               />
+                               <Button
+                                 type="button"
+                                 size="sm"
+                                 onClick={() => updateItemPrice(item.stock_id, parseFloat(editPrice))}
+                               >
+                                 <Check className="w-3 h-3" />
+                               </Button>
+                               <Button
+                                 type="button"
+                                 size="sm"
+                                 variant="ghost"
+                                 onClick={() => {
+                                   setEditingItemId(null);
+                                   setEditPrice("");
+                                 }}
+                               >
+                                 <X className="w-3 h-3" />
+                               </Button>
+                             </div>
+                           ) : (
+                             <p className="text-sm text-muted-foreground">
+                               {item.quantity} × ₹{item.selling_price.toFixed(2)} = ₹{item.subtotal.toFixed(2)}
+                               <Button
+                                 type="button"
+                                 variant="ghost"
+                                 size="sm"
+                                 className="ml-2 h-6 px-2"
+                                 onClick={() => {
+                                   setEditingItemId(item.stock_id);
+                                   setEditPrice(item.selling_price.toString());
+                                 }}
+                               >
+                                 <Edit2 className="w-3 h-3" />
+                               </Button>
+                             </p>
+                           )}
                            {includeGST && (
                              <p className="text-xs text-muted-foreground">
                                GST: ₹{item.total_gst.toFixed(2)} (SGST: ₹{item.sgst_amount.toFixed(2)}, CGST: ₹{item.cgst_amount.toFixed(2)})
                              </p>
                            )}
                          </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeItemFromOrder(item.stock_id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
+                         <Button
+                           type="button"
+                           variant="ghost"
+                           size="sm"
+                           onClick={() => removeItemFromOrder(item.stock_id)}
+                         >
+                           <Trash2 className="w-4 h-4 text-destructive" />
+                         </Button>
                       </div>
                     ))}
                      <div className="border-t pt-2 mt-2 space-y-1">
@@ -505,16 +601,32 @@ const Bills = () => {
                        </p>
                        <p className="text-base font-semibold">{order.customers?.name}</p>
                      </div>
-                     <Button
-                       size="sm"
-                       variant="outline"
-                       onClick={() => generateBillPDF(order.id)}
-                     >
-                       <Download className="w-4 h-4" />
-                     </Button>
+                     <div className="flex gap-1">
+                       <Button
+                         size="sm"
+                         variant="outline"
+                         onClick={() => generateBillPDF(order.id)}
+                       >
+                         <Download className="w-4 h-4" />
+                       </Button>
+                       <Button
+                         size="sm"
+                         variant="outline"
+                         onClick={() => shareViaWhatsApp(order)}
+                       >
+                         <MessageCircle className="w-4 h-4" />
+                       </Button>
+                       <Button
+                         size="sm"
+                         variant="outline"
+                         onClick={() => shareViaEmail(order)}
+                       >
+                         <Mail className="w-4 h-4" />
+                       </Button>
+                     </div>
                    </CardTitle>
                  </CardHeader>
-                <CardContent className="pt-4">
+                 <CardContent className="pt-4">
                   <div className="flex items-center justify-between p-3 bg-gradient-to-r from-accent/20 to-secondary/20 rounded-lg">
                     <div className="flex items-center gap-2">
                       <DollarSign className="w-5 h-5 text-accent" />
