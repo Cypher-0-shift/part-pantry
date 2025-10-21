@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Package, Edit, Trash2, Plus } from "lucide-react";
+import { Search, Package, Edit, Trash2, Plus, PackagePlus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -18,6 +18,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import UpdateStockDialog from "@/components/UpdateStockDialog";
 
 interface Part {
   id: string;
@@ -33,6 +41,9 @@ interface Part {
   quantity: number;
   low_stock_threshold: number;
   image_url: string | null;
+  car_company: string | null;
+  car_model: string | null;
+  car_name: string | null;
 }
 
 const Parts = () => {
@@ -42,21 +53,38 @@ const Parts = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [updateStockPart, setUpdateStockPart] = useState<Part | null>(null);
+  
+  // Filter states
+  const [selectedCompany, setSelectedCompany] = useState<string>("all");
+  const [selectedModel, setSelectedModel] = useState<string>("all");
+  const [selectedCar, setSelectedCar] = useState<string>("all");
+
+  // Get unique values for filters
+  const companies = Array.from(new Set(parts.map(p => p.car_company).filter(Boolean))) as string[];
+  const models = Array.from(new Set(parts.filter(p => selectedCompany === "all" || p.car_company === selectedCompany).map(p => p.car_model).filter(Boolean))) as string[];
+  const cars = Array.from(new Set(parts.filter(p => (selectedCompany === "all" || p.car_company === selectedCompany) && (selectedModel === "all" || p.car_model === selectedModel)).map(p => p.car_name).filter(Boolean))) as string[];
 
   useEffect(() => {
     fetchParts();
   }, []);
 
   useEffect(() => {
-    const filtered = parts.filter(
-      (part) =>
+    const filtered = parts.filter((part) => {
+      const matchesSearch =
         part.part_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         part.hsn_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         part.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        part.category.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+        part.category.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesCompany = selectedCompany === "all" || part.car_company === selectedCompany;
+      const matchesModel = selectedModel === "all" || part.car_model === selectedModel;
+      const matchesCar = selectedCar === "all" || part.car_name === selectedCar;
+      
+      return matchesSearch && matchesCompany && matchesModel && matchesCar;
+    });
     setFilteredParts(filtered);
-  }, [searchTerm, parts]);
+  }, [searchTerm, parts, selectedCompany, selectedModel, selectedCar]);
 
   const fetchParts = async () => {
     setLoading(true);
@@ -99,6 +127,27 @@ const Parts = () => {
     setDeleteId(null);
   };
 
+  const handleUpdateStock = async (partId: string, newQuantity: number) => {
+    const { error } = await supabase
+      .from("stock")
+      .update({ quantity: newQuantity })
+      .eq("id", partId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Stock quantity updated successfully",
+      });
+      fetchParts();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -119,7 +168,7 @@ const Parts = () => {
         </div>
 
         <Card className="mb-6">
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -128,6 +177,63 @@ const Parts = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Select value={selectedCompany} onValueChange={(value) => {
+                  setSelectedCompany(value);
+                  setSelectedModel("all");
+                  setSelectedCar("all");
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Companies" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Companies</SelectItem>
+                    {companies.map((company) => (
+                      <SelectItem key={company} value={company}>
+                        {company}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Select value={selectedModel} onValueChange={(value) => {
+                  setSelectedModel(value);
+                  setSelectedCar("all");
+                }} disabled={selectedCompany === "all"}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Models" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Models</SelectItem>
+                    {models.map((model) => (
+                      <SelectItem key={model} value={model}>
+                        {model}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Select value={selectedCar} onValueChange={setSelectedCar} disabled={selectedModel === "all"}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Cars" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Cars</SelectItem>
+                    {cars.map((car) => (
+                      <SelectItem key={car} value={car}>
+                        {car}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -159,7 +265,7 @@ const Parts = () => {
             {filteredParts.map((part) => (
               <Card key={part.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 {part.image_url && (
-                  <div className="h-48 bg-muted overflow-hidden">
+                  <div className="h-32 bg-muted overflow-hidden">
                     <img
                       src={part.image_url}
                       alt={part.part_name}
@@ -167,55 +273,61 @@ const Parts = () => {
                     />
                   </div>
                 )}
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-3">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-lg truncate mb-1">{part.part_name}</h3>
-                      <p className="text-sm text-muted-foreground">{part.brand}</p>
+                      <h3 className="font-bold text-base truncate mb-1">{part.part_name}</h3>
+                      <p className="text-xs text-muted-foreground">{part.brand}</p>
                     </div>
-                    <Badge variant={part.quantity <= part.low_stock_threshold ? "destructive" : "secondary"}>
-                      {part.quantity <= part.low_stock_threshold ? "Low Stock" : "In Stock"}
+                    <Badge variant={part.quantity <= part.low_stock_threshold ? "destructive" : "secondary"} className="text-xs">
+                      {part.quantity <= part.low_stock_threshold ? "Low" : "Stock"}
                     </Badge>
                   </div>
                   
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm">
+                  <div className="space-y-1 mb-3">
+                    <div className="flex justify-between text-xs">
                       <span className="text-muted-foreground">HSN:</span>
                       <span className="font-medium">{part.hsn_code}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Category:</span>
-                      <span className="font-medium">{part.category}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
+                    {part.car_company && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Car:</span>
+                        <span className="font-medium">{part.car_company} {part.car_model}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-xs">
                       <span className="text-muted-foreground">Buy/Sell:</span>
                       <span className="font-medium">₹{part.buying_price.toFixed(2)} / ₹{part.selling_price.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">GST:</span>
-                      <span className="font-medium">{part.sgst_percentage + part.cgst_percentage}%</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Quantity:</span>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Qty:</span>
                       <span className={`font-medium ${part.quantity <= part.low_stock_threshold ? 'text-destructive' : ''}`}>
                         {part.quantity}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1 gap-2">
-                      <Edit className="w-4 h-4" />
+                  <div className="grid grid-cols-3 gap-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="gap-1 text-xs h-8"
+                      onClick={() => setUpdateStockPart(part)}
+                    >
+                      <PackagePlus className="w-3 h-3" />
+                      Update
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-1 text-xs h-8">
+                      <Edit className="w-3 h-3" />
                       Edit
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
                       onClick={() => setDeleteId(part.id)}
-                      className="gap-2"
+                      className="gap-1 text-xs h-8"
                     >
-                      <Trash2 className="w-4 h-4" />
-                      Delete
+                      <Trash2 className="w-3 h-3" />
                     </Button>
                   </div>
                 </CardContent>
@@ -239,6 +351,16 @@ const Parts = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {updateStockPart && (
+        <UpdateStockDialog
+          open={!!updateStockPart}
+          onOpenChange={(open) => !open && setUpdateStockPart(null)}
+          partName={updateStockPart.part_name}
+          currentQuantity={updateStockPart.quantity}
+          onUpdate={(newQuantity) => handleUpdateStock(updateStockPart.id, newQuantity)}
+        />
+      )}
     </div>
   );
 };

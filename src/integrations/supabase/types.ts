@@ -236,6 +236,9 @@ export type Database = {
         Row: {
           brand: string
           buying_price: number
+          car_company: string | null
+          car_model: string | null
+          car_name: string | null
           category: string
           cgst_percentage: number
           created_at: string
@@ -254,6 +257,9 @@ export type Database = {
         Insert: {
           brand: string
           buying_price?: number
+          car_company?: string | null
+          car_model?: string | null
+          car_name?: string | null
           category: string
           cgst_percentage?: number
           created_at?: string
@@ -272,6 +278,9 @@ export type Database = {
         Update: {
           brand?: string
           buying_price?: number
+          car_company?: string | null
+          car_model?: string | null
+          car_name?: string | null
           category?: string
           cgst_percentage?: number
           created_at?: string

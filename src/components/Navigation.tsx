@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Package, Users, FileText, LogOut, Plus, CreditCard, Building2, Settings as SettingsIcon } from "lucide-react";
+import { LayoutDashboard, Package, Users, FileText, LogOut, CreditCard, Building2, Settings as SettingsIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -67,12 +67,6 @@ const Navigation = () => {
             </nav>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/add-stock">
-              <Button size="sm" className="gap-2">
-                <Plus className="w-4 h-4" />
-                Add Stock
-              </Button>
-            </Link>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2">
               <LogOut className="w-4 h-4" />
               Logout

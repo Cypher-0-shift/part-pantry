@@ -23,6 +23,9 @@ const AddStock = () => {
     partName: "",
     brand: "",
     category: "",
+    carCompany: "",
+    carModel: "",
+    carName: "",
     buyingPrice: "",
     sellingPrice: "",
     sgst: "",
@@ -129,6 +132,9 @@ const AddStock = () => {
         part_name: formData.partName,
         brand: formData.brand,
         category: formData.category,
+        car_company: formData.carCompany || null,
+        car_model: formData.carModel || null,
+        car_name: formData.carName || null,
         buying_price: parseFloat(formData.buyingPrice),
         selling_price: parseFloat(formData.sellingPrice),
         price: parseFloat(formData.sellingPrice), // Keep for backward compatibility
@@ -225,6 +231,39 @@ const AddStock = () => {
                     value={formData.category}
                     onChange={handleChange}
                     required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="carCompany">Car Company</Label>
+                  <Input
+                    id="carCompany"
+                    name="carCompany"
+                    placeholder="Toyota"
+                    value={formData.carCompany}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="carModel">Car Model</Label>
+                  <Input
+                    id="carModel"
+                    name="carModel"
+                    placeholder="Camry"
+                    value={formData.carModel}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="carName">Car Name</Label>
+                  <Input
+                    id="carName"
+                    name="carName"
+                    placeholder="2024 Camry LE"
+                    value={formData.carName}
+                    onChange={handleChange}
                   />
                 </div>
 
